@@ -5,3 +5,4 @@ authors = ["Muthu Kumar <muthukumar@thefeathers.in>"]
 edition = "2018"
 
 [dependencies]
+clap = "2.33"
