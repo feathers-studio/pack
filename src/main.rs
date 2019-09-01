@@ -1,37 +1,30 @@
 extern crate clap;
+mod commands;
 
-use clap::{App, Arg};
+use clap::{App, Arg, SubCommand};
+// use commands::p
 
 fn main() {
-    let matches = App::new("Pack")
-        .version("1.0")
-        .author("Muthu Kumar")
-        .about(" pack and move at a moment's notice")
-        .arg(
-            Arg::with_name("pack")
-                .short("p")
-                .long("pack")
-                .help("Generate Pack manifest"),
-        )
-        .arg(
-            Arg::with_name("add")
-                .short("a")
-                .long("add")
-                .help("Add current path to Pack manifest"),
-        )
-        .arg(
-            Arg::with_name("up")
-                .short("u")
-                .long("up")
-                .help("packages all the chosen paths and creates an archive"),
-        )
-        .arg(
-            Arg::with_name("push")
-                .short("z")
-                .long("push")
-                .help("Push generated archive to location"),
-        )
-        .get_matches();
+	let matches = App::new("Pack")
+		.version("1.0")
+		.author("Muthu Kumar")
+		.about("pack and move at a moment's notice")
+		.subcommand(SubCommand::with_name("start").arg(
+			Arg::with_name("test")
+		).help("Generate Pack manifest"))
+		.subcommand(SubCommand::with_name("add").help("Add current path to Pack manifest"))
+		.subcommand(
+			SubCommand::with_name("up")
+				.help("packages all the chosen paths and creates an archive"),
+		)
+		.subcommand(SubCommand::with_name("push").help("Push generated archive to location"))
+		.get_matches();
 
 	println!("{:?}", matches.args);
+	if let Some(command) = matches.subcommand {
+		match command.name.as_ref() {
+			"start" => commands::start::pack(),
+			_ => println!("Command not found"),
+		}
+	}
 }
