@@ -1,3 +1,5 @@
-pub fn pack() {
-	println!("Packing");
+use clap::SubCommand;
+
+pub fn pack(c: SubCommand) {
+	println!("Start {:?}", c);
 }

@@ -2,6 +2,7 @@ extern crate clap;
 
 use clap::{App, Arg, SubCommand};
 mod classifier;
+mod subcommands;
 
 fn main() {
 	let matches = App::new("Pack")
@@ -10,7 +11,7 @@ fn main() {
 		.about("pack and move at a moment's notice")
 		.subcommand(
 			SubCommand::with_name("start")
-				.arg(Arg::with_name("test"))
+				.arg(Arg::with_name("test").long("test"))
 				.help("Generate Pack manifest"),
 		)
 		.subcommand(SubCommand::with_name("add").help("Add current path to Pack manifest"))
