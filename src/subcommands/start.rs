@@ -1,5 +1,7 @@
-use clap::SubCommand;
+use clap::{ArgMatches, SubCommand};
 
 pub fn pack(c: SubCommand) {
-	println!("Start {:?}", c);
+	let args: ArgMatches = c.matches;
+	// args 
+	println!("Start {:?}", args);
 }
