@@ -1,17 +1,6 @@
 const std = @import("std");
 const eql = std.mem.eql;
 
-fn readConfig(arraylist: *std.ArrayList([]u8), allocator: std.mem.Allocator) !void {
-    const file = try std.fs.cwd().openFile(".pack", .{});
-    defer file.close();
-    const reader = file.reader();
-
-    // reading file into arraylist sep by \n
-    while (try reader.readUntilDelimiterOrEofAlloc(allocator, '\n', 4096)) |line| {
-        try arraylist.append(line);
-    }
-}
-
 fn equal(a: []const u8, b: []const u8) bool {
     return eql(u8, a, b);
 }
@@ -87,18 +76,15 @@ pub fn main() !u8 {
     if (equal("pack", command)) {
         // try to read config
         const reader = file.reader();
-        var configList = std.ArrayList([]u8).init(allocator);
-        defer configList.deinit();
-        defer for (configList.items) |line| allocator.free(line);
 
-        // reading file into arraylist sep by \n
+        std.debug.print("Packing:\n", .{});
         while (try reader.readUntilDelimiterOrEofAlloc(allocator, '\n', 4096)) |line| {
-            try configList.append(line);
+            defer allocator.free(line);
+            // TODO(mkr): actually copy files
+            std.debug.print("- {s}\n", .{line});
         }
+        std.debug.print("\nDone! You should probably commit changes.\n\n", .{});
 
-        std.debug.print("\nPacking:\n\n", .{});
-        for (configList.items) |line| std.debug.print(" {s}\n", .{line});
-        std.debug.print("\nDone!\n\n", .{});
         return 0;
     }
 
