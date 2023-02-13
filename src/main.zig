@@ -91,7 +91,14 @@ const Pack = struct {
         var store = try cwd.makeOpenPath("store", .{});
         defer store.close();
         while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var from = try root.openIterableDir(line, .{});
+            var from = root.openIterableDir(line, .{}) catch |err| {
+                if (err == error.NotDir) {
+                    try root.copyFile(line, store, line[1..], .{});
+                    try out.print(" - {s}\n", .{line});
+                    continue;
+                }
+                return err;
+            };
             defer from.close();
 
             var to = try store.makeOpenPath(line[1..], .{});
@@ -116,7 +123,14 @@ const Pack = struct {
         var root = try std.fs.openDirAbsolute("/", .{});
         defer root.close();
         while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            var from = try store.openIterableDir(line[1..], .{});
+            var from = store.openIterableDir(line[1..], .{}) catch |err| {
+                if (err == error.NotDir) {
+                    try store.copyFile(line[1..], root, line, .{});
+                    try out.print(" - {s}\n", .{line});
+                    continue;
+                }
+                return err;
+            };
             defer from.close();
 
             var to = try root.makeOpenPath(line, .{});
