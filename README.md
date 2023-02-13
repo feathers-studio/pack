@@ -12,8 +12,6 @@ zig build
 
 ## Usage
 
-Only some commands are implemented so far.
-
 ### pack init
 
 Creates an empty `.pack` file in cwd if it doesn't exist yet.
@@ -22,10 +20,10 @@ Creates an empty `.pack` file in cwd if it doesn't exist yet.
 
 Adds given file paths to `.pack` file.
 
-### pack pack (not implemented)
+### pack pack
 
-Pulls the files specified in `.pack` to current directory, preserving their paths and creates an `unpack` binary next to them. This repo can be committed to git.
+Pulls the files specified in `.pack` to `store/` under current directory, preserving their paths. This repo can be committed to git.
 
-### ./unpack (not implemented)
+### pack unpack
 
-Since pack creates an unpack file, target machine doesn't need `pack` to unpack a pack-ed archive.
+Pulls the files specified in `.pack` out of `store/` and into their original absolute paths on the system.
