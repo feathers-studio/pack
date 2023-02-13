@@ -77,6 +77,8 @@ const Pack = struct {
 
         return 0;
     }
+
+    /// TODO: This is almost identical to unpack, refactor
     fn pack(cwd: std.fs.Dir, out: Writer) !void {
         const file = try cwd.openFile(".pack", .{ .mode = .read_only });
         defer file.close();
@@ -96,8 +98,34 @@ const Pack = struct {
             defer to.close();
 
             try cp(from, to);
+            try out.print(" - {s}\n", .{line});
         }
         try out.writeAll("\nDone! You should probably commit changes.\n\n");
+    }
+
+    /// TODO: This is almost identical to pack, refactor
+    fn unpack(cwd: std.fs.Dir, out: Writer) !void {
+        const file = try cwd.openFile(".pack", .{ .mode = .read_only });
+        defer file.close();
+
+        const reader = file.reader();
+
+        var buf: [4096]u8 = undefined;
+        var store = try cwd.makeOpenPath("store", .{});
+        defer store.close();
+        var root = try std.fs.openDirAbsolute("/", .{});
+        defer root.close();
+        while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+            var from = try store.openIterableDir(line[1..], .{});
+            defer from.close();
+
+            var to = try root.makeOpenPath(line, .{});
+            defer to.close();
+
+            try cp(from, to);
+            try out.print(" - {s}\n", .{line});
+        }
+        try out.writeAll("\nUnpacking done!\n\n");
     }
 };
 
@@ -116,7 +144,7 @@ pub fn main() !u8 {
         .init => try Pack.init(std.fs.cwd(), err),
         .add => return try Pack.add(std.fs.cwd(), args[2..], err),
         .pack => try Pack.pack(std.fs.cwd(), err),
-        .unpack => unreachable, // TODO
+        .unpack => try Pack.unpack(std.fs.cwd(), err),
     }
     return 0;
 }
