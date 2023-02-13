@@ -1,5 +1,22 @@
 const std = @import("std");
 
+fn cp(from: std.fs.IterableDir, to: std.fs.Dir) !void {
+    var iterator = from.iterate();
+    while (try iterator.next()) |dir_entry|
+        switch (dir_entry.kind) {
+            .Directory => {
+                var from_sub_dir = try from.dir.openIterableDir(dir_entry.name, .{});
+                defer from_sub_dir.close();
+
+                var to_sub_dir = try to.makeOpenPath(dir_entry.name, .{});
+                defer to_sub_dir.close();
+
+                try cp(from_sub_dir, to_sub_dir);
+            },
+            else => try from.dir.copyFile(dir_entry.name, to, dir_entry.name, .{}),
+        };
+}
+
 const Pack = struct {
     const Command = enum {
         help,
@@ -67,9 +84,18 @@ const Pack = struct {
         const reader = file.reader();
 
         var buf: [4096]u8 = undefined;
+        var root = try std.fs.openDirAbsolute("/", .{});
+        defer root.close();
+        var store = try cwd.makeOpenPath("store", .{});
+        defer store.close();
         while (try reader.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            // TODO(mkr): actually copy files
-            try out.print("- {s}\n", .{line});
+            var from = try root.openIterableDir(line, .{});
+            defer from.close();
+
+            var to = try store.makeOpenPath(line[1..], .{});
+            defer to.close();
+
+            try cp(from, to);
         }
         try out.writeAll("\nDone! You should probably commit changes.\n\n");
     }
