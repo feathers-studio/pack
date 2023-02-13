@@ -1,68 +1,51 @@
 const std = @import("std");
-const eql = std.mem.eql;
 
-fn equal(a: []const u8, b: []const u8) bool {
-    return eql(u8, a, b);
-}
-
-const help =
-    \\Help text
-    \\
-;
-
-pub fn main() !u8 {
-    // const log = std.io.getStdOut().writer().print;
-    // const err = std.io.getStdErr().writer().print;
-
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(!gpa.deinit());
-    const allocator = gpa.allocator();
-
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
-
-    if (args.len < 2) {
-        try std.io.getStdErr().writer().print("No command passed.\n\n" ++ help, .{});
-        return 1;
+const Pack = struct {
+    const Command = enum {
+        help,
+        init,
+        add,
+        pack,
+        unpack,
+        fn fromStr(s: []const u8) ?Command {
+            if (std.mem.eql(u8, "help", s)) return .help;
+            if (std.mem.eql(u8, "init", s)) return .init;
+            if (std.mem.eql(u8, "add", s)) return .add;
+            if (std.mem.eql(u8, "pack", s)) return .pack;
+            if (std.mem.eql(u8, "unpack", s)) return .unpack;
+            return null;
+        }
+    };
+    fn help(out: anytype) !void {
+        try out.writeAll(
+            \\Help text
+            \\
+        );
     }
-
-    const command = args[1];
-
-    // -- pack help
-    if (equal("help", command)) {
-        std.debug.print(help, .{});
-        return 0;
-    }
-
-    // -- pack init
-    if (equal("init", command)) {
+    fn init(out: anytype) !void {
         const file = std.fs.cwd().createFile(".pack", .{ .exclusive = true }) catch |err| {
             switch (err) {
                 error.PathAlreadyExists => {
-                    std.debug.print(".pack file already exists in current directory. Skipping.\n", .{});
-                    return 0;
+                    try out.writeAll(".pack file already exists in current directory. Skipping.\n");
+                    return;
                 },
                 else => {
-                    std.debug.print("Surprising.\n", .{});
+                    try out.writeAll("Surprising.\n");
                     return err;
                 },
             }
         };
         defer file.close();
-        std.debug.print("Created empty .pack file in current directory.\n", .{});
-        return 0;
+        try out.writeAll("Created empty .pack file in current directory.\n");
     }
-
-    const file = try std.fs.cwd().openFile(".pack", .{ .mode = .read_write });
-    defer file.close();
-
-    // -- pack add
-    if (equal("add", command)) {
-        if (args.len < 3) {
-            try std.io.getStdErr().writer().print("Pass at least one file to add.\n", .{});
+    fn add(files: []const []const u8, out: anytype) !u8 {
+        if (files.len == 0) {
+            try out.print("Pass at least one file to add.\n", .{});
             return 2;
         }
-        const files = args[2..];
+        const file = try std.fs.cwd().openFile(".pack", .{ .mode = .read_write });
+        defer file.close();
+
         for (files) |f| {
             try file.seekFromEnd(0);
             try file.writeAll(f);
@@ -71,9 +54,9 @@ pub fn main() !u8 {
 
         return 0;
     }
-
-    // -- pack pack
-    if (equal("pack", command)) {
+    fn pack(allocator: std.mem.Allocator) !void {
+        const file = try std.fs.cwd().openFile(".pack", .{ .mode = .read_write });
+        defer file.close();
         // try to read config
         const reader = file.reader();
 
@@ -84,10 +67,37 @@ pub fn main() !u8 {
             std.debug.print("- {s}\n", .{line});
         }
         std.debug.print("\nDone! You should probably commit changes.\n\n", .{});
+    }
+};
 
-        return 0;
+pub fn main() !u8 {
+    const err = std.io.getStdErr().writer();
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.debug.assert(!gpa.deinit());
+    const allocator = gpa.allocator();
+
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    if (args.len < 2) {
+        try err.writeAll("No command passed.\n\n");
+        try Pack.help(err);
+        return 1;
     }
 
-    std.debug.print("Unknown command: {s}\n\n" ++ help, .{command});
-    return 2;
+    if (Pack.Command.fromStr(args[1])) |command| {
+        switch (command) {
+            .help => try Pack.help(err),
+            .init => try Pack.init(err),
+            .add => return Pack.add(args[2..], err),
+            .pack => try Pack.pack(allocator),
+            .unpack => unreachable, // TODO
+        }
+        return 0;
+    } else {
+        std.debug.print("Unknown command: {s}\n\n", .{args[1]});
+        try Pack.help(err);
+        return 2;
+    }
 }
