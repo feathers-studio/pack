@@ -7,13 +7,8 @@ const Pack = struct {
         add,
         pack,
         unpack,
-        fn fromStr(s: []const u8) ?Command {
-            if (std.mem.eql(u8, "help", s)) return .help;
-            if (std.mem.eql(u8, "init", s)) return .init;
-            if (std.mem.eql(u8, "add", s)) return .add;
-            if (std.mem.eql(u8, "pack", s)) return .pack;
-            if (std.mem.eql(u8, "unpack", s)) return .unpack;
-            return null;
+        fn from(str: []const u8) Command {
+            return std.meta.stringToEnum(Command, str) orelse .help;
         }
     };
     fn help(out: anytype) !void {
@@ -80,24 +75,12 @@ pub fn main() !u8 {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    if (args.len < 2) {
-        try err.writeAll("No command passed.\n\n");
-        try Pack.help(err);
-        return 1;
+    switch (Pack.Command.from(if (args.len >= 2) args[1] else "help")) {
+        .help => try Pack.help(err),
+        .init => try Pack.init(err),
+        .add => return Pack.add(args[2..], err),
+        .pack => try Pack.pack(allocator),
+        .unpack => unreachable, // TODO
     }
-
-    if (Pack.Command.fromStr(args[1])) |command| {
-        switch (command) {
-            .help => try Pack.help(err),
-            .init => try Pack.init(err),
-            .add => return Pack.add(args[2..], err),
-            .pack => try Pack.pack(allocator),
-            .unpack => unreachable, // TODO
-        }
-        return 0;
-    } else {
-        std.debug.print("Unknown command: {s}\n\n", .{args[1]});
-        try Pack.help(err);
-        return 2;
-    }
+    return 0;
 }
